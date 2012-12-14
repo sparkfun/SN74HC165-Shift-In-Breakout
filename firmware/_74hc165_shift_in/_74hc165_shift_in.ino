@@ -1,129 +1,100 @@
 /*
- * SparkFun SN74HC165 Input Shift Register Example
- * Based on Arduino Playground example, http://www.arduino.cc/playground/Code/ShiftRegSN74HC165N
- * Modified by Jordan McConnell at SparkFun Electronics
- *
- *
- * Program to shift in the bit values from the SN74HC165N 8-bit
- * parallel-in/serial-out shift register chips/breakout boards.
- *
- * This sketch demonstrates reading in digital states from one
- * or more daisy-chained SN74HC165N shift register breakout
- * boards while using only 4 digital pins on the Arduino.
- *
- * You can daisy-chain these boards by soldering the left/right
- * sides of the boards together and by connecting the serial-out
- * (Q7 pin) of the last shift register to the specified dataPin
- * of the Arduino.
- *
- * As is, this code supports 1-4 Shift registers, however, you
- * of course can daisy chain as many as you like while still
- * using only 4 Arduino pins if you process them 4 at a time
- * into separate unsigned long variables.
+
+The purpose of this code is to get a user quickly up and running with the 
+74HC165 Breakout Board.  This board and code allows a user to add more inputs
+to their Arduino board using less pins.  While this particular example is meant
+for one breakout board, the boards can be soldered in series (right side of one
+to left side of the next) to achieve an even better input pin to Arduino pin ratio.
+
+Example Output:
+The incoming values of the shift register are: 
+ABCDEFGH : 00001111
+
+
+SparkFun Electronics - written by someone with no coding skill, Jordan McConnell
+Date: December 14, 2012
+License: Beerware. You like code. We like beer. Simple trading economics.
+
 */
 
+// HARDWARE CONNECTIONS
+// Connect the following pins between your Arduino and the 74HC165 Breakout Board
+// Connect pins A-H to 5V or GND or switches or whatever
+int data_pin = 11; // Connect Pin 11 to SER_OUT (serial data out)
+int shld_pin = 8; // Connect Pin 8 to SH/!LD (shift or active low load)
+int clk_pin = 12; // Connect Pin 12 to CLK (the clock that times the shifting)
+int ce_pin = 9; // Connect Pin 9 to !CE (clock enable, active low)
 
-// MAKE SURE THESE ARE CORRECT FOR YOUR SETUP
-// Number of shift register chips that are daisy-chained.
-#define NUMBER_OF_SHIFT_CHIPS   1
-// Change the "int" to "long" if NUMBER_OF_SHIFT_CHIPS is > 2.
-#define BYTES_VAL_T unsigned int
+byte incoming; // Variable to store the 8 values loaded from the shift register
 
+// The part that runs once
+void setup() 
+{                
+  // Initialize serial to gain the power to obtain relevant information, 9600 baud
+  Serial.begin(9600);
 
-// Width of data, 8 data bits per shift register.
-#define DATA_WIDTH   NUMBER_OF_SHIFT_CHIPS * 8
-// Width of pulse to trigger the shift register to read and latch.
-#define PULSE_WIDTH_USEC   5
-// Delay between shift register reads.
-#define POLL_DELAY_MSEC   1000
+  // Initialize each digital pin to either output or input
+  // We are commanding the shift register with each pin with the exception of the serial
+  // data we get back on the data_pin line.
+  pinMode(shld_pin, OUTPUT);
+  pinMode(ce_pin, OUTPUT);
+  pinMode(clk_pin, OUTPUT);
+  pinMode(data_pin, INPUT);
+  
+  // Required initial states of these two pins according to the datasheet timing diagram
+  digitalWrite(clk_pin, HIGH);
+  digitalWrite(shld_pin, HIGH);
+  
+}
 
+// The part that runs to infinity and beyond
+void loop() {
+  
+  incoming = read_shift_regs(); // Read the shift register, it likes that
+  
+  // Print out the values being read from the shift register
+  Serial.println("\nThe incoming values of the shift register are: ");
+  Serial.print("ABCDEFGH : ");
+  print_byte(incoming); // Print every 1 and 0 that correlates with A through H
+  //Serial.println(incoming,BIN); // This way works too but leaves out the leading zeros
+  
+  delay(2000); // Wait for some arbitrary amount of time
+  
+}
 
-// HARDWARE PINS, CHANGE IF YOUR SETUP IS DIFFERENT
-                          // Signal Name, SF Board label
-int ploadPin        = 8;  // Parallel load, SH/!LD
-int clockEnablePin  = 9;  // Clock Enable, /CE
-int dataPin         = 11; // Q7, SER_OUT of the last shift register in the chain
-int clockPin        = 12; // Clock, CLK
-
-
-// Read the state of all shift registers.
-// Return state of state of register pins in an unsigned integer (or long).
-BYTES_VAL_T read_shift_regs()
+// This code is intended to trigger the shift register to grab values from it's A-H inputs
+byte read_shift_regs()
 {
-    byte bitVal;
-    BYTES_VAL_T bytesVal = 0;
+  byte the_shifted = 0;  // An 8 bit number to carry each bit value of A-H
 
-    // Trigger a parallel Load to latch the state of the data lines.
-    digitalWrite(clockEnablePin, HIGH);
-    digitalWrite(ploadPin, LOW);
-    delay(PULSE_WIDTH_USEC);
-    digitalWrite(ploadPin, HIGH);
-    delayMicroseconds(PULSE_WIDTH_USEC);
-    digitalWrite(clockEnablePin, LOW);
+  // Trigger loading the state of the A-H data lines into the shift register
+  digitalWrite(shld_pin, LOW);
+  delayMicroseconds(5); // Requires delays so says the datasheet timing diagram
+  digitalWrite(shld_pin, HIGH);
+  delayMicroseconds(5);
+  
+  // Required initial states of these two pins according to the datasheet timing diagram
+  pinMode(clk_pin, OUTPUT);
+  pinMode(data_pin, INPUT);
+  digitalWrite(clk_pin, HIGH);
+  digitalWrite(ce_pin, LOW); // Enable the clock
 
-    // Loop to read each bit value from the serial out line
-    // of the SN74HC165. Store bits in variable bytesVal.
-    for(int i = 0; i < DATA_WIDTH; i++)
+  // Get the A-H values
+  the_shifted = shiftIn(data_pin, clk_pin, MSBFIRST);
+  digitalWrite(ce_pin, HIGH); // Disable the clock
+  
+  return the_shifted;
+
+}
+
+// A function that prints all the 1's and 0's of a byte, so 8 bits +or- 2
+void print_byte(byte val)
+{
+    byte i;
+    for(byte i=0; i<=7; i++)
     {
-        // get next data bit from shift registers
-        bitVal = digitalRead(dataPin);
-
-        // Set the corresponding bit in bytesVal.
-        bytesVal |= (bitVal << ((DATA_WIDTH-1) - i));
-
-        // Pulse the Clock (rising edge shifts the next bit).
-        digitalWrite(clockPin, HIGH);
-        delayMicroseconds(PULSE_WIDTH_USEC);
-        digitalWrite(clockPin, LOW);
+      Serial.print(val >> i & 1, BIN); // Magic bit shift, if you care look up the <<, >>, and & operators
     }
-
-    return(bytesVal);
+    Serial.print("\n"); // Go to the next line, do not receive $200
 }
 
-// Display state of all shift registers.
-void display_shift_data(BYTES_VAL_T pinValues)
-{
-    Serial.print("\r\nPin States:\r\n");
-
-    for(int i = 0; i < DATA_WIDTH; i++)
-    {
-        Serial.print("  Pin-");
-        Serial.print(i);
-        Serial.print(": ");
-
-        if((pinValues >> i) & 1)
-            Serial.println("HIGH");
-        else
-            Serial.println("LOW");
-    }
-}
-
-// Initialize hardware pins for reading shift registers and printing serial.
-void setup()
-{
-    Serial.begin(9600);
-
-    // Initialize each digital pin
-    pinMode(ploadPin, OUTPUT);
-    pinMode(clockEnablePin, OUTPUT);
-    pinMode(clockPin, OUTPUT);
-    pinMode(dataPin, INPUT);
-
-    digitalWrite(clockPin, LOW);
-    digitalWrite(ploadPin, HIGH);
-}
-
-// Read and display shift register data, wait, repeat.
-void loop()
-{
-    BYTES_VAL_T data = 0; // Stores input pin data from shift registers
-
-    // Read the state of all shift registers.
-    data = read_shift_regs();
-
-    // Display state of all shift registers.
-    display_shift_data(data);
-
-    // Wait a sec
-    delay(POLL_DELAY_MSEC);
-}
