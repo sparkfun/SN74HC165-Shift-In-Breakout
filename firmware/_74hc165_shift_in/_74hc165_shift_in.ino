@@ -1,5 +1,7 @@
 /*
 
+SN74HC165 Shift-In BOB Example Code
+
 The purpose of this code is to get a user quickly up and running with the 
 74HC165 Breakout Board.  This board and code allows a user to add more inputs
 to their Arduino board using less pins.  While this particular example is meant
@@ -20,10 +22,10 @@ License: Beerware. You like code. We like beer. Simple trading economics.
 // HARDWARE CONNECTIONS
 // Connect the following pins between your Arduino and the 74HC165 Breakout Board
 // Connect pins A-H to 5V or GND or switches or whatever
-int data_pin = 11; // Connect Pin 11 to SER_OUT (serial data out)
-int shld_pin = 8; // Connect Pin 8 to SH/!LD (shift or active low load)
-int clk_pin = 12; // Connect Pin 12 to CLK (the clock that times the shifting)
-int ce_pin = 9; // Connect Pin 9 to !CE (clock enable, active low)
+const int data_pin = 11; // Connect Pin 11 to SER_OUT (serial data out)
+const int shld_pin = 8; // Connect Pin 8 to SH/!LD (shift or active low load)
+const int clk_pin = 12; // Connect Pin 12 to CLK (the clock that times the shifting)
+const int ce_pin = 9; // Connect Pin 9 to !CE (clock enable, active low)
 
 byte incoming; // Variable to store the 8 values loaded from the shift register
 
@@ -69,7 +71,7 @@ byte read_shift_regs()
 
   // Trigger loading the state of the A-H data lines into the shift register
   digitalWrite(shld_pin, LOW);
-  delayMicroseconds(5); // Requires delays so says the datasheet timing diagram
+  delayMicroseconds(5); // Requires a delay here according to the datasheet timing diagram
   digitalWrite(shld_pin, HIGH);
   delayMicroseconds(5);
   
@@ -95,6 +97,6 @@ void print_byte(byte val)
     {
       Serial.print(val >> i & 1, BIN); // Magic bit shift, if you care look up the <<, >>, and & operators
     }
-    Serial.print("\n"); // Go to the next line, do not receive $200
+    Serial.print("\n"); // Go to the next line, do not collect $200
 }
 
