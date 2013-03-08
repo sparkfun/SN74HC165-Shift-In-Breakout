@@ -9,7 +9,7 @@ The SN74HC165N is a neat little IC that will take an input of up to 8 parallel l
 Repository Contents
 -------------------
 
-* **/Production Files** - ???
+* **/Production Files** - Panels used by SparkFun Production for Pick and Place manufacturing
 * **/firmware** - Example Arduino firmware
 * **/hardware** - Eagle PCB layout files
 
